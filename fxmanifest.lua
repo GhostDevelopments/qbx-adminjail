@@ -1,7 +1,7 @@
 fx_version 'cerulean'
 game 'gta5'
 
-description 'Admin Jail for QBox'
+description 'Admin Jail Script for QBox'
 version '1.0.0'
 author 'Ghost Developments'
 
@@ -11,7 +11,11 @@ shared_scripts {
 }
 
 client_script 'client.lua'
-server_script 'server.lua'
+
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server.lua'
+}
 
 dependencies {
     'qbx_core',
