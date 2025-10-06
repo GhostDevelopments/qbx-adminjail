@@ -1,4 +1,3 @@
-local MySQL = require('@oxmysql/lib/MySQL')
 local jailedPlayers = {}  -- In-memory cache for online players' jail data
 
 -- Load jailed data from DB on resource start
@@ -128,4 +127,89 @@ AddEventHandler('playerDropped', function()
     if data then
         MySQL.update('UPDATE admin_jail SET time = ? WHERE citizenid = ?', {data.time, citizenid})
     end
+end)
+
+-- Commands (using ox_lib)
+lib.addCommand(Config.Commands.jail, {
+    help = 'Jail a player',
+    params = {
+        {name = 'id', help = 'Player ID'},
+        {name = 'time', help = 'Time (minutes)'},
+        {name = 'reason', help = 'Reason'}
+    }
+}, function(source, args)
+    if not hasPermission(source) then return end
+    local id = tonumber(args.id)
+    local time = tonumber(args.time)
+    local reason = args.reason
+    if not id or not time or time <= 0 or not reason then return end
+    jailPlayer(id, time, reason, source)
+end)
+
+lib.addCommand(Config.Commands.release, {
+    help = 'Release a player',
+    params = {
+        {name = 'id', help = 'Player ID'}
+    }
+}, function(source, args)
+    if not hasPermission(source) then return end
+    local id = tonumber(args.id)
+    if not id then return end
+    releasePlayer(id, nil, source)
+end)
+
+lib.addCommand(Config.Commands.time, {
+    help = 'Check your jail time'
+}, function(source)
+    local player = exports.qbx_core:GetPlayer(source)
+    local data = jailedPlayers[player.PlayerData.citizenid]
+    if not data then
+        exports.qbx_core:Notify(source, Config.Language.notjailed, 'error')
+        return
+    end
+    exports.qbx_core:Notify(source, string.format(Config.Language.timeleft, data.time), 'primary')
+end)
+
+lib.addCommand(Config.Commands.list, {
+    help = 'List all jailed players'
+}, function(source)
+    if not hasPermission(source) then return end
+    local list = getJailedList()
+    if #list == 0 then
+        exports.qbx_core:Notify(source, Config.Language.noonejailed, 'error')
+        return
+    end
+    exports.qbx_core:Notify(source, Config.Language.listheader, 'primary')
+    for _, v in ipairs(list) do
+        local msg = string.format(Config.Language.listitem, v.name, v.id, v.citizenid, v.time, v.reason)
+        exports.qbx_core:Notify(source, msg, 'success')
+    end
+end)
+
+lib.addCommand(Config.Commands.menu, {
+    help = 'Open admin jail menu'
+}, function(source)
+    if not hasPermission(source) then return end
+    TriggerClientEvent('adminjail:openMenu', source)
+end)
+
+-- Callbacks and events
+lib.callback.register('adminjail:getJailed', function(source)
+    if not hasPermission(source) then return end
+    return getJailedList()
+end)
+
+RegisterServerEvent('adminjail:release')
+AddEventHandler('adminjail:release', function(targetId, citizenid)
+    local source = source
+    if not hasPermission(source) then return end
+    releasePlayer(targetId, citizenid, source)
+end)
+
+RegisterServerEvent('adminjail:updateTime')
+AddEventHandler('adminjail:updateTime', function(targetId, citizenid, newTime)
+    local source = source
+    if not hasPermission(source) then return end
+    if newTime <= 0 then return end
+    updateTime(targetId, citizenid, newTime, source)
 end)
