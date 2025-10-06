@@ -1,4 +1,4 @@
-local QBX = exports['qbx_core']:GetCoreObject()
+local QBCore = exports['qb-core']:GetCoreObject()
 local jailedPlayers = {}  -- In-memory cache for online players' jail data
 
 -- Load jailed data from DB on resource start
@@ -197,4 +197,5 @@ AddEventHandler('adminjail:updateTime', function(targetId, citizenid, newTime)
     if not hasPermission(source) then return end
     if newTime <= 0 then return end
     updateTime(targetId, citizenid, newTime, source)
+
 end)
